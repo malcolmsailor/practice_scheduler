@@ -1,5 +1,16 @@
 I use this script to schedule my jazz piano practice according to the approach described [here](https://malcolmsailor.com/2023/11/22/anki-for-jazz-practice.html). Of course, you could use it to practice anything.
 
+Example output:
+
+```
+    Deck         N due    N new  Top card                                Hard    Good    Easy
+--  ---------  -------  -------  --------------------------------------  ------  ------  ------
+ 1  Tunes            6        0  Im old fashioned                        5d      10d     20d
+ 2  Harmony          1        1  Keep harmonies as diatonic as possible  1d      3d      6d
+ 3  Rhythm           8        1  Constant triplets in RH with metronome  6d      12d     24d
+ 4  LHTexture        5        1  Octave-shell voicings oom-pah           1d      3d      6d
+```
+
 # Usage
 
 After installing the requirements and creating a folder for your practice decks and cards, you can see the cards that are due with the following command. (Of course, there will not be any cards due until you create some yourself.)
