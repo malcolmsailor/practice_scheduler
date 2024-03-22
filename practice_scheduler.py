@@ -372,12 +372,13 @@ def update_yaml_from_df(df, i, response):
     today_date = datetime.date.today()
     if response != "Bury":
         data["last_seen"] = today_date.strftime("%Y-%m-%d")
+        if "past_dates" in data:
+            data["past_dates"].append(today_date.strftime("%Y-%m-%d"))
+        else:
+            data["past_dates"] = [today_date.strftime("%Y-%m-%d")]
+
     future_date = today_date + datetime.timedelta(days=int(interval))
     data["date"] = future_date.strftime("%Y-%m-%d")
-    if "past_dates" in data:
-        data["past_dates"].append(today_date.strftime("%Y-%m-%d"))
-    else:
-        data["past_dates"] = [today_date.strftime("%Y-%m-%d")]
 
     # Write back to the YAML file
     with open(file_path, "w") as file:
