@@ -14,7 +14,7 @@ The input folder should be arranged as follows:
 The decks can be added with the `--add-deck` command but any config.yaml files need to
 be created manually.
 
-Each deck can contain an optional config.yaml file specifying the properties of the 
+Each deck can contain an optional config.yaml file specifying the properties of the
 Config dataclass below. If it is not found, the config.yaml in the root folder will be
 used, and if that isn't found, then the default values are used.
 
@@ -353,6 +353,19 @@ def update_yaml_from_df(df, i, response):
         print(f"Suspended {deck_name}: {df.at[i, 'Top card']}")
         return deck_name, is_new
 
+    if response == "Forget":
+        with open(file_path, "r") as file:
+            data = yaml.safe_load(file)
+        assert isinstance(data, dict)
+        data.pop("last_seen", None)
+        data.pop("date", None)
+        # We don't need to remove "past_dates" because (as far as I can tell) it is
+        #   only used to print the study history
+        with open(file_path, "w") as file:
+            yaml.safe_dump(data, file)
+        print(f"Forgot {deck_name}: {df.at[i, 'Top card']}")
+        return deck_name, is_new
+
     if response == "Bury":
         if is_new:
             raise ValueError("Can't bury new cards")
@@ -441,6 +454,7 @@ def parse_args():
                     "Bury",
                     "Cycle",
                     "Suspend",
+                    "Forget",
                 } or re.match(r"^\d+d$", response)
                 responses.append((i, response))
         except:
