@@ -128,7 +128,7 @@ def see_new(folder, deck_name):
     return [x[0] for x in out]
 
 
-def process_folders(folder, global_config, peek):
+def process_folders(folder, global_config, peek, complete=False):
     result = defaultdict(dict)
     current_date = datetime.date.today()
 
@@ -164,6 +164,9 @@ def process_folders(folder, global_config, peek):
                     file_date = data.get("date", None)
                     if file_date is None:
                         new_list.append((file_path, touch_time))
+                        continue
+                    if complete:
+                        files_list.append((file_path, touch_time))
                         continue
                     if isinstance(file_date, str):
                         file_date = datetime.datetime.strptime(
@@ -238,7 +241,7 @@ def get_studied_cards(folder, date):
     print(tabulate(df, headers=df.columns))  # type:ignore
 
 
-def create_dataframe_from_yaml(data_dict, all=False, jitter=None):
+def create_dataframe_from_yaml(data_dict, all_due=False, complete=False, jitter=None):
     data_list = []
 
     def _append_item(file_path, new, n_due, n_new):
@@ -274,7 +277,7 @@ def create_dataframe_from_yaml(data_dict, all=False, jitter=None):
         due_list = data_dict[key].get("due", ())
         new_list = data_dict[key].get("new", ())
         if due_list or new_list:
-            if not all:
+            if not all_due:
                 if due_list:
                     file_path = due_list[0]
                     new = False
@@ -405,7 +408,8 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("input_folder")
     parser.add_argument("--undo", action="store_true", help="undo the last change")
-    parser.add_argument("--all", action="store_true", help="see all due cards")
+    parser.add_argument("--all-due", action="store_true", help="see all due cards")
+    parser.add_argument("--see-all", action="store_true", help="see all cards")
     parser.add_argument(
         "--add", nargs=2, metavar=("'DECK NAME'", "'CARD NAME'"), help="add a new card"
     )
@@ -428,7 +432,7 @@ def parse_args():
         metavar="YYYY-MM-DD",
         const=datetime.date.today().strftime("%Y-%m-%d"),
         help=(
-            f"see cards studied on YYYY-MM-DD (default: today). "
+            "see cards studied on YYYY-MM-DD (default: today). "
             "You can also indicate a number of days ago as 1d or 4d"
         ),
     )
@@ -457,7 +461,7 @@ def parse_args():
                     "Forget",
                 } or re.match(r"^\d+d$", response)
                 responses.append((i, response))
-        except:
+        except Exception:
             # TODO: (Malcolm 2024-01-10) improve this help
             print("Error: usage `1 Hard`, `2 Good`, `1 3d`, etc.")
             sys.exit(1)
@@ -549,9 +553,9 @@ if __name__ == "__main__":
         add_deck(args.input_folder, args.add_deck)
     if args.add:
         changes = True
-        assert (
-            len(args.add) == 2
-        ), "--add must be followed by 2 items, a deck name followed by a card"
+        assert len(args.add) == 2, (
+            "--add must be followed by 2 items, a deck name followed by a card"
+        )
         add_item(args.input_folder, args.add[0], args.add[1], args.due)
     elif args.due:
         print("'--due' has no effect if not adding a card")
@@ -559,8 +563,13 @@ if __name__ == "__main__":
 
     if responses:
         changes = True
-        folder_contents = process_folders(args.input_folder, global_config, args.peek)
-        df = create_dataframe_from_yaml(folder_contents, args.all, global_config.jitter)
+        folder_contents = process_folders(
+            args.input_folder, global_config, args.peek, complete=args.see_all
+        )
+
+        df = create_dataframe_from_yaml(
+            folder_contents, args.all_due, args.see_all, global_config.jitter
+        )
 
         for i, response in responses:
             result = update_yaml_from_df(df, i, response)
@@ -568,8 +577,12 @@ if __name__ == "__main__":
                 update_memory(folder_contents, result)
                 write_memories(folder_contents)
 
-    folder_contents = process_folders(args.input_folder, global_config, args.peek)
-    df = create_dataframe_from_yaml(folder_contents, args.all, global_config.jitter)
+    folder_contents = process_folders(
+        args.input_folder, global_config, args.peek, complete=args.see_all
+    )
+    df = create_dataframe_from_yaml(
+        folder_contents, args.all_due, args.see_all, global_config.jitter
+    )
 
     print_df(df)
     if changes:
