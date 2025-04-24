@@ -574,7 +574,11 @@ if __name__ == "__main__":
         )
 
         df = create_dataframe_from_yaml(
-            folder_contents, args.all_due, args.see_all, global_config.jitter
+            folder_contents,
+            args.all_due,
+            args.see_all,
+            global_config.jitter,
+            args.sort_by,
         )
 
         for i, response in responses:
