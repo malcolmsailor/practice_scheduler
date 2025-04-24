@@ -241,7 +241,9 @@ def get_studied_cards(folder, date):
     print(tabulate(df, headers=df.columns))  # type:ignore
 
 
-def create_dataframe_from_yaml(data_dict, all_due=False, complete=False, jitter=None):
+def create_dataframe_from_yaml(
+    data_dict, all_due=False, complete=False, jitter=None, sort_by=None
+):
     data_list = []
 
     def _append_item(file_path, new, n_due, n_new):
@@ -300,6 +302,9 @@ def create_dataframe_from_yaml(data_dict, all_due=False, complete=False, jitter=
     df["Hard"] = df["Good"] // 2
     df.loc[df["Hard"] < 1, "Hard"] = 1
     df["Easy"] = df["Good"] * 2
+
+    if sort_by == "interval":
+        df = df.sort_values(by="Good", ascending=True, ignore_index=True)
 
     df.index += 1
     return df
@@ -439,6 +444,7 @@ def parse_args():
     parser.add_argument(
         "--debug", action="store_true", help="enter debuger on exception"
     )
+    parser.add_argument("--sort-by", choices=["interval"], default=None)
     args, remaining = parser.parse_known_args()
 
     if args.add:
@@ -581,7 +587,7 @@ if __name__ == "__main__":
         args.input_folder, global_config, args.peek, complete=args.see_all
     )
     df = create_dataframe_from_yaml(
-        folder_contents, args.all_due, args.see_all, global_config.jitter
+        folder_contents, args.all_due, args.see_all, global_config.jitter, args.sort_by
     )
 
     print_df(df)
