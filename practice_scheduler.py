@@ -85,7 +85,7 @@ class Memory:
 
 
 def custom_excepthook(exc_type, exc_value, exc_traceback):
-    if exc_type != KeyboardInterrupt:
+    if exc_type is KeyboardInterrupt:
         traceback.print_exception(exc_type, exc_value, exc_traceback, file=sys.stdout)
         pdb.post_mortem(exc_traceback)
 
@@ -134,7 +134,7 @@ def process_folders(folder, global_config, peek, complete=False):
 
     for subfolder in os.listdir(folder):
         subfolder_path = os.path.join(folder, subfolder)
-
+        intervals = []
         if os.path.isdir(subfolder_path):
             result_key = folder_to_name(subfolder)
             files_list = []
@@ -163,10 +163,14 @@ def process_folders(folder, global_config, peek, complete=False):
                     touch_time = data.get("touch", os.path.getmtime(file_path))
                     file_date = data.get("date", None)
                     if file_date is None:
-                        new_list.append((file_path, touch_time))
+                        new_list.append((file_path, touch_time, 1))
                         continue
+                    last_date = datetime.datetime.strptime(
+                        data["last_seen"], "%Y-%m-%d"
+                    ).date()
+                    interval = (current_date - last_date).days
                     if complete:
-                        files_list.append((file_path, touch_time))
+                        files_list.append((file_path, touch_time, interval))
                         continue
                     if isinstance(file_date, str):
                         file_date = datetime.datetime.strptime(
@@ -174,8 +178,9 @@ def process_folders(folder, global_config, peek, complete=False):
                         ).date()
 
                     if file_date <= current_date + datetime.timedelta(days=int(peek)):
-                        # print(datetime.datetime.fromtimestamp(mod_time), file_path)
-                        files_list.append((file_path, touch_time))
+                        intervals.append(interval)
+
+                        files_list.append((file_path, touch_time, interval))
 
             for key, list_, max_, today_ in zip(
                 ("due", "new"),
@@ -186,10 +191,13 @@ def process_folders(folder, global_config, peek, complete=False):
                 if max_ is not None:
                     max_ -= today_
                 list_.sort(key=lambda x: x[1])  # Sort by modification time
+                list_.sort(key=lambda x: x[2])
+
                 if list_:
                     result[result_key][key] = [f[0] for f in list_][:max_]
                     result[result_key]["memory"] = memory
                     result[result_key]["path"] = subfolder_path
+                    result[result_key]["config"] = local_config
 
     return result
 
@@ -241,9 +249,7 @@ def get_studied_cards(folder, date):
     print(tabulate(df, headers=df.columns))  # type:ignore
 
 
-def create_dataframe_from_yaml(
-    data_dict, all_due=False, complete=False, jitter=None, sort_by=None
-):
+def create_dataframe_from_yaml(data_dict, all_due=False, complete=False, sort_by=None):
     data_list = []
 
     def _append_item(file_path, new, n_due, n_new):
@@ -296,9 +302,19 @@ def create_dataframe_from_yaml(
     df = pd.DataFrame(
         data_list, columns=["Deck", "N due", "N new", "File", "Top card", "Good"]
     )
-    if jitter is not None:
-        jitter_amt = np.random.random(len(df)) * 2 * jitter - jitter + 1
-        df["Good"] = (df["Good"] * jitter_amt).round().astype(int)
+
+    for key in data_dict:
+        config = data_dict[key]["config"]
+        if config.jitter is not None:
+            jitter_amt = (
+                np.random.random((df["Deck"] == key).sum()) * 2 * config.jitter
+                - config.jitter
+                + 1
+            )
+            df.loc[df["Deck"] == key, "Good"] = (
+                (df.loc[df["Deck"] == key, "Good"] * jitter_amt).round().astype(int)
+            )
+
     df["Hard"] = df["Good"] // 2
     df.loc[df["Hard"] < 1, "Hard"] = 1
     df["Easy"] = df["Good"] * 2
@@ -315,7 +331,7 @@ def print_df(df):
 
     add_d = lambda x: f"{x}d"
 
-    # In order to avoid `utureWarning: Setting an item of incompatible dtype is
+    # In order to avoid `FutureWarning: Setting an item of incompatible dtype is
     #   deprecated and will raise in a future error of pandas,` we seemingly need
     #   to drop the columns and then re-add them.
     hard_days = df["Hard"].apply(add_d).astype(str)
@@ -574,11 +590,7 @@ if __name__ == "__main__":
         )
 
         df = create_dataframe_from_yaml(
-            folder_contents,
-            args.all_due,
-            args.see_all,
-            global_config.jitter,
-            args.sort_by,
+            folder_contents, args.all_due, args.see_all, args.sort_by
         )
 
         for i, response in responses:
@@ -591,7 +603,7 @@ if __name__ == "__main__":
         args.input_folder, global_config, args.peek, complete=args.see_all
     )
     df = create_dataframe_from_yaml(
-        folder_contents, args.all_due, args.see_all, global_config.jitter, args.sort_by
+        folder_contents, args.all_due, args.see_all, args.sort_by
     )
 
     print_df(df)
