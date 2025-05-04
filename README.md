@@ -11,7 +11,7 @@ Example output:
  4  LHTexture        5        1  Octave-shell voicings oom-pah           1d      3d      6d
 ```
 
-# Usage
+# Basic usage
 
 After installing the requirements and creating a folder for your practice decks and cards, you can see the cards that are due with the following command. (Of course, there will not be any cards due until you create some yourself.)
 
@@ -45,7 +45,16 @@ pj --add "my deck" "card name"
 
 For a full list of options, invoke the script with `--help`.
 
+# View upcoming cards
+
+On 2025/05/04, I added a second script to this folder to print the upcoming cards in a nice format. The basic invocation is as follows:
+
+```bash
+python view_upcoming.py path/to/folder
+```
+
+There are a few options which can be seen by invoking the script with the `--help` flag.
 
 # Technical notes
 
-I wrote it very quickly and hackily for my personal usage. Rather than using some sort of database it simply uses the file system, storing decks as folders and cards as YAML files. While this probably isn't the sleekest implementation, it has the advantage of making the cards very easy to edit manually. Undo was also very easy to implement by maintaining the folder as a Git repository.
+I wrote this script very quickly and hackily for my personal usage. Rather than using some sort of database it simply uses the file system, storing decks as folders and cards as YAML files. While this probably isn't the sleekest implementation, it has the advantage of making the cards very easy to edit manually. Undo was also very easy to implement by maintaining the folder as a Git repository.
